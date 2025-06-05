@@ -4,41 +4,70 @@
   <meta charset="UTF-8">
   <title>レインボーブロック崩し</title>
   <style>
+    body {
+      background: #111;
+      color: white;
+      text-align: center;
+      font-family: sans-serif;
+    }
     canvas {
       background: #000;
       display: block;
-      margin: 0 auto;
+      margin: 10px auto;
       border: 2px solid #fff;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    .controls label {
+      margin-right: 8px;
     }
   </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="480" height="320"></canvas>
+
+<h1>🌈 レインボーブロック崩し</h1>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<div class="controls">
+  <label for="speed">速度：</label>
+  <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1">
+  <span id="speedValue">1.0x</span>
+</div>
 
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  const ballRadius = 8;
+  let speedMultiplier = 1.0;
+  const speedSlider = document.getElementById("speed");
+  const speedDisplay = document.getElementById("speedValue");
+
+  speedSlider.addEventListener("input", () => {
+    speedMultiplier = parseFloat(speedSlider.value);
+    speedDisplay.textContent = speedMultiplier.toFixed(1) + "x";
+  });
+
+  const ballRadius = 10;
   let x = canvas.width / 2;
-  let y = canvas.height - 30;
+  let y = canvas.height - 40;
   let dx = 2;
   let dy = -2;
 
-  const paddleHeight = 10;
-  const paddleWidth = 75;
+  const paddleHeight = 12;
+  const paddleWidth = 100;
   let paddleX = (canvas.width - paddleWidth) / 2;
 
   let rightPressed = false;
   let leftPressed = false;
 
-  const brickRowCount = 5;
-  const brickColumnCount = 7;
-  const brickWidth = 55;
-  const brickHeight = 20;
+  const brickRowCount = 6;
+  const brickColumnCount = 10;
+  const brickWidth = 60;
+  const brickHeight = 25;
   const brickPadding = 10;
-  const brickOffsetTop = 30;
-  const brickOffsetLeft = 30;
+  const brickOffsetTop = 40;
+  const brickOffsetLeft = 35;
 
   const rainbowColors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"];
 
@@ -82,7 +111,6 @@
           ) {
             dy = -dy;
             b.status = 0;
-
             if (checkWin()) {
               alert("クリア！おめでとう！");
               document.location.reload();
@@ -145,12 +173,12 @@
     drawPaddle();
     collisionDetection();
 
-    if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
+    if (x + dx * speedMultiplier > canvas.width - ballRadius || x + dx * speedMultiplier < ballRadius) {
       dx = -dx;
     }
-    if (y + dy < ballRadius) {
+    if (y + dy * speedMultiplier < ballRadius) {
       dy = -dy;
-    } else if (y + dy > canvas.height - ballRadius) {
+    } else if (y + dy * speedMultiplier > canvas.height - ballRadius) {
       if (x > paddleX && x < paddleX + paddleWidth) {
         dy = -dy;
       } else {
@@ -160,13 +188,14 @@
     }
 
     if (rightPressed && paddleX < canvas.width - paddleWidth) {
-      paddleX += 5;
+      paddleX += 6 * speedMultiplier;
     } else if (leftPressed && paddleX > 0) {
-      paddleX -= 5;
+      paddleX -= 6 * speedMultiplier;
     }
 
-    x += dx;
-    y += dy;
+    x += dx * speedMultiplier;
+    y += dy * speedMultiplier;
+
     requestAnimationFrame(draw);
   }
 
