@@ -7,109 +7,163 @@
     body {
       background: #111;
       color: white;
-      text-align: center;
       font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
     }
     canvas {
       background: #000;
       display: block;
-      margin: 10px auto;
+      margin: 0 auto;
       border: 2px solid #fff;
+    }
+    .screen {
+      display: none;
+      padding: 20px;
+    }
+    .active {
+      display: block;
+    }
+    button {
+      font-size: 20px;
+      padding: 10px 20px;
+      margin-top: 20px;
     }
     .controls {
       margin-top: 10px;
-    }
-    .controls label {
-      margin-right: 8px;
-    }
-    .info {
-      margin: 10px auto;
-      font-size: 18px;
     }
   </style>
 </head>
 <body>
 
-<h1>🌈 レインボーブロック崩し</h1>
-<div class="info">残りブロック数：<span id="blockCount">--</span></div>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<!-- タイトル画面 -->
+<div id="titleScreen" class="screen active">
+  <h1>🌈 レインボーブロック崩し</h1>
+  <button onclick="startGame()">ゲーム開始</button>
+</div>
 
-<div class="controls">
-  <label for="speed">速度：</label>
-  <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1">
-  <span id="speedValue">1.0x</span>
+<!-- ゲーム画面 -->
+<div id="gameScreen" class="screen">
+  <div>残りブロック数：<span id="blockCount">--</span></div>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div class="controls">
+    <label for="speed">速度：</label>
+    <input type="range" id="speed" min="0.5" max="3" step="0.1" value="1">
+    <span id="speedValue">1.0x</span>
+  </div>
+</div>
+
+<!-- リザルト画面 -->
+<div id="resultScreen" class="screen">
+  <h2 id="resultMessage"></h2>
+  <button onclick="showTitle()">タイトルへ戻る</button>
 </div>
 
 <script>
   const canvas = document.getElementById("gameCanvas");
   const ctx = canvas.getContext("2d");
 
-  let speedMultiplier = 1.0;
-  const speedSlider = document.getElementById("speed");
-  const speedDisplay = document.getElementById("speedValue");
-  const blockCountDisplay = document.getElementById("blockCount");
+  const screens = {
+    title: document.getElementById("titleScreen"),
+    game: document.getElementById("gameScreen"),
+    result: document.getElementById("resultScreen"),
+  };
 
+  const blockCountDisplay = document.getElementById("blockCount");
+  const resultMessage = document.getElementById("resultMessage");
+
+  const speedSlider = document.getElementById("speed");
+  const speedValue = document.getElementById("speedValue");
   speedSlider.addEventListener("input", () => {
     speedMultiplier = parseFloat(speedSlider.value);
-    speedDisplay.textContent = speedMultiplier.toFixed(1) + "x";
+    speedValue.textContent = speedMultiplier.toFixed(1) + "x";
   });
 
-  const ballRadius = 10;
-  let x = canvas.width / 2;
-  let y = canvas.height - 40;
-  let dx = 2;
-  let dy = -2;
+  let ballRadius = 10;
+  let paddleHeight = 12;
+  let paddleWidth = 100;
+  let brickRowCount = 6;
+  let brickColumnCount = 10;
+  let brickWidth = 60;
+  let brickHeight = 25;
+  let brickPadding = 10;
+  let brickOffsetTop = 40;
+  let brickOffsetLeft = 35;
+  let rainbowColors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"];
 
-  const paddleHeight = 12;
-  const paddleWidth = 100;
-  let paddleX = (canvas.width - paddleWidth) / 2;
-
+  let speedMultiplier;
+  let x, y, dx, dy;
+  let paddleX;
   let rightPressed = false;
   let leftPressed = false;
+  let bricks = [];
+  let totalBricks, remainingBricks;
+  let gameRunning = false;
 
-  const brickRowCount = 6;
-  const brickColumnCount = 10;
-  const brickWidth = 60;
-  const brickHeight = 25;
-  const brickPadding = 10;
-  const brickOffsetTop = 40;
-  const brickOffsetLeft = 35;
-
-  const rainbowColors = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"];
-
-  let totalBricks = brickRowCount * brickColumnCount;
-  let remainingBricks = totalBricks;
-
-  const bricks = [];
-  for (let c = 0; c < brickColumnCount; c++) {
-    bricks[c] = [];
-    for (let r = 0; r < brickRowCount; r++) {
-      bricks[c][r] = { x: 0, y: 0, status: 1 };
+  function showScreen(name) {
+    for (let key in screens) {
+      screens[key].classList.remove("active");
     }
+    screens[name].classList.add("active");
   }
 
-  document.addEventListener("keydown", keyDownHandler);
-  document.addEventListener("keyup", keyUpHandler);
-
-  function keyDownHandler(e) {
-    if (e.key === "Right" || e.key === "ArrowRight") {
-      rightPressed = true;
-    } else if (e.key === "Left" || e.key === "ArrowLeft") {
-      leftPressed = true;
-    }
+  function showTitle() {
+    showScreen("title");
   }
 
-  function keyUpHandler(e) {
-    if (e.key === "Right" || e.key === "ArrowRight") {
-      rightPressed = false;
-    } else if (e.key === "Left" || e.key === "ArrowLeft") {
-      leftPressed = false;
+  function showResult(message) {
+    resultMessage.textContent = message;
+    showScreen("result");
+  }
+
+  function initGameVariables() {
+    x = canvas.width / 2;
+    y = canvas.height - 40;
+    dx = 2;
+    dy = -2;
+    speedMultiplier = parseFloat(speedSlider.value);
+    speedValue.textContent = speedMultiplier.toFixed(1) + "x";
+    paddleX = (canvas.width - paddleWidth) / 2;
+    rightPressed = false;
+    leftPressed = false;
+
+    bricks = [];
+    for (let c = 0; c < brickColumnCount; c++) {
+      bricks[c] = [];
+      for (let r = 0; r < brickRowCount; r++) {
+        bricks[c][r] = { x: 0, y: 0, status: 1 };
+      }
     }
+    totalBricks = brickColumnCount * brickRowCount;
+    remainingBricks = totalBricks;
+    updateBlockCount();
   }
 
   function updateBlockCount() {
     blockCountDisplay.textContent = remainingBricks;
   }
+
+  function startGame() {
+    initGameVariables();
+    showScreen("game");
+    gameRunning = true;
+    draw();
+  }
+
+  function endGame(success) {
+    gameRunning = false;
+    showResult(success ? "🎉 クリアおめでとう！" : "😢 ゲームオーバー！");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Right" || e.key === "ArrowRight") rightPressed = true;
+    else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = true;
+  });
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Right" || e.key === "ArrowRight") rightPressed = false;
+    else if (e.key === "Left" || e.key === "ArrowLeft") leftPressed = false;
+  });
 
   function collisionDetection() {
     for (let c = 0; c < brickColumnCount; c++) {
@@ -127,8 +181,7 @@
             remainingBricks--;
             updateBlockCount();
             if (remainingBricks === 0) {
-              alert("クリア！おめでとう！");
-              document.location.reload();
+              endGame(true);
             }
           }
         }
@@ -171,6 +224,8 @@
   }
 
   function draw() {
+    if (!gameRunning) return;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBricks();
     drawBall();
@@ -186,8 +241,8 @@
       if (x > paddleX && x < paddleX + paddleWidth) {
         dy = -dy;
       } else {
-        alert("ゲームオーバー！");
-        document.location.reload();
+        endGame(false);
+        return;
       }
     }
 
@@ -202,9 +257,6 @@
 
     requestAnimationFrame(draw);
   }
-
-  updateBlockCount(); // 初期表示
-  draw();
 </script>
 </body>
 </html>
