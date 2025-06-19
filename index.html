@@ -4,7 +4,7 @@ let bottomWallTimer = 0;
 let itemDrops = [];
 
 function drawBall(ball) {
-  ball.trail.unshift({ x: ball.x, y: ball.y });
+  ball.trail.unshift({ x: ball.x, y: ball.y })
   if (ball.trail.length > 10) ball.trail.pop();
 
   ctx.beginPath();
