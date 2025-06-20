@@ -20,6 +20,7 @@
 </head>
 <body>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="boostIcon" style="position:absolute; left:20px; bottom:20px; width:80px; height:80px; background:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,5 95,50 50,95 5,50%22 fill=%22none%22 stroke=%22yellow%22 stroke-width=%225%22 /><text x=%2225%22 y=%2270%22 font-size=%2250%22 fill=%22yellow%22>Z</text></svg>') no-repeat center/contain; opacity:0.3; transition:opacity 0.2s ease;"></div>
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -146,8 +147,10 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") rightPressed = true;
   if (e.key === "ArrowLeft") leftPressed = true;
   if (e.key === "z" || e.key === "Z") {
+    document.getElementById("boostIcon").style.opacity = 1;
     boostActive = true;
     boostTimer = 60;
+    setTimeout(() => document.getElementById("boostIcon").style.opacity = 0.3, 1000);
   }
 });
 
