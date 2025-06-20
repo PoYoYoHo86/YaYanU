@@ -29,6 +29,19 @@
 
 let paddleColor = "white";
 function drawPaddle() {
+  // 加速中の火のエフェクト
+  if (boostActive) {
+    for (let i = 0; i < 10; i++) {
+      const fx = paddleX + Math.random() * paddleWidth;
+      const fy = canvas.height - paddleHeight - 5 + Math.random() * 10;
+      const flameSize = Math.random() * 4 + 2;
+      ctx.beginPath();
+      ctx.arc(fx, fy + 10, flameSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, ${Math.floor(Math.random() * 150)}, 0, 0.6)`;
+      ctx.fill();
+      ctx.closePath();
+    }
+  }
   ctx.beginPath();
   if (boostActive) {
     paddleHue = (paddleHue + 10) % 360;
