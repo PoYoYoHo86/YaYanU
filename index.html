@@ -199,4 +199,129 @@ function draw() {
   requestAnimationFrame(draw);
 }
 
+// 必要な関数定義を追加
+
+function drawPaddle() {
+  // 加速中の火のエフェクト
+  if (boostActive) {
+    for (let i = 0; i < 10; i++) {
+      const fx = paddleX + Math.random() * paddleWidth;
+      const fy = canvas.height - paddleHeight - 5 + Math.random() * 10;
+      const flameSize = Math.random() * 4 + 2;
+      ctx.beginPath();
+      ctx.arc(fx, fy + 10, flameSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, ${Math.floor(Math.random() * 150)}, 0, 0.6)`;
+      ctx.fill();
+      ctx.closePath();
+    }
+  }
+  ctx.beginPath();
+  if (boostActive) {
+    paddleHue = (paddleHue + 10) % 360;
+    ctx.fillStyle = `hsl(${paddleHue}, 100%, 60%)`;
+  } else {
+    ctx.fillStyle = "white";
+  }
+  ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
+  ctx.closePath();
+}
+
+function drawBall(ball) {
+  ball.trail.push({ x: ball.x, y: ball.y, alpha: 1 });
+  if (ball.trail.length > 20) ball.trail.shift();
+  for (let i = 0; i < ball.trail.length; i++) {
+    let t = ball.trail[i];
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(255,255,255,${t.alpha})`;
+    ctx.lineWidth = ballRadius * 2;
+    ctx.moveTo(t.x, t.y);
+    if (i > 0) ctx.lineTo(ball.trail[i - 1].x, ball.trail[i - 1].y);
+    ctx.stroke();
+    ctx.closePath();
+    t.alpha -= 0.05;
+  }
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+  ctx.fillStyle = ball.color;
+  ctx.fill();
+  ctx.closePath();
+}
+
+function drawItems() {
+  for (let i = 0; i < itemDrops.length; i++) {
+    const item = itemDrops[i];
+    ctx.beginPath();
+    ctx.fillStyle = "aqua";
+    ctx.arc(item.x, item.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.closePath();
+    item.y += 2;
+    if (
+      item.y > canvas.height - paddleHeight - 10 &&
+      item.x > paddleX && item.x < paddleX + paddleWidth
+    ) {
+      bottomWallActive = true;
+      bottomWallTimer = 600;
+      itemDrops.splice(i, 1);
+      i--;
+    }
+  }
+}
+
+function drawBottomWall() {
+  if (bottomWallActive) {
+    ctx.fillStyle = "blue";
+    ctx.fillRect(0, canvas.height - 5, canvas.width, 5);
+    bottomWallTimer--;
+    if (bottomWallTimer <= 0) bottomWallActive = false;
+  }
+}
+
+function drawExplosions() {
+  for (let i = 0; i < explosionParticles.length; i++) {
+    const p = explosionParticles[i];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p.alpha})`;
+    ctx.fill();
+    ctx.closePath();
+    p.x += p.dx;
+    p.y += p.dy;
+    p.alpha -= 0.02;
+    if (p.alpha <= 0) {
+      explosionParticles.splice(i, 1);
+      i--;
+    }
+  }
+}
+
+function createItem(x, y) {
+  itemDrops.push({ x, y });
+}
+
+function createWallBounceEffect(x, y) {
+  for (let i = 0; i < 10; i++) {
+    explosionParticles.push({
+      x,
+      y,
+      dx: (Math.random() - 0.5) * 4,
+      dy: (Math.random() - 0.5) * 4,
+      radius: 2,
+      r: Math.floor(Math.random() * 255),
+      g: Math.floor(Math.random() * 255),
+      b: Math.floor(Math.random() * 255),
+      alpha: 1
+    });
+  }
+}
+
+function endGame(win) {
+  gameRunning = false;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = "40px monospace";
+  ctx.fillStyle = win ? "lime" : "red";
+  ctx.textAlign = "center";
+  ctx.fillText(win ? "YOU WIN!" : "GAME OVER", canvas.width / 2, canvas.height / 2);
+}
+
 draw();
