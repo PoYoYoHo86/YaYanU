@@ -39,11 +39,13 @@
     let blocksBroken = 0;
 
     const ballRadius = 8;
-    let balls = [{
+    let angle = Math.random() * Math.PI / 3 + Math.PI / 6; // 30〜60度の範囲でランダム
+let speed = 2.5;
+let balls = [{
       x: canvas.width / 2,
       y: canvas.height - 30,
-      dx: 2,
-      dy: -2,
+      dx: speed * Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1),
+      dy: -speed * Math.sin(angle),
       trail: [],
       color: "white"
     }];
@@ -59,8 +61,6 @@
 
     const items = [];
     const SHIELD_DURATION = 10000; // 10秒
-let rainbowEffectFrames = 0;
-
 // 背景の常駐レインボーボール生成
 const bgBalls = Array.from({ length: 20 }, () => ({
   x: Math.random() * canvas.width,
@@ -187,11 +187,13 @@ const bgBalls = Array.from({ length: 20 }, () => ({
               blocksBroken++;
               if (blocksBroken % 5 === 0) {
                 rainbowEffectFrames = 30;
+                let angle = Math.random() * Math.PI / 3 + Math.PI / 6;
+                let speed = 2.5;
                 balls.push({
                   x: paddleX + paddleWidth / 2,
                   y: canvas.height - paddleHeight - 20,
-                  dx: 2 * (Math.random() > 0.5 ? 1 : -1),
-                  dy: -2,
+                  dx: speed * Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1),
+                  dy: -speed * Math.sin(angle),
                   trail: [],
                   color: "white"
                 });
