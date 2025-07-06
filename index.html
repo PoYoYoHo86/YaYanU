@@ -9,6 +9,7 @@
       background: black;
       color: white;
       font-family: monospace;
+      text-align: center;
     }
     canvas {
       display: block;
@@ -20,7 +21,6 @@
 </head>
 <body>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
-  <div id="boostIcon" style="position:absolute; left:20px; bottom:20px; width:80px; height:80px; background:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,5 95,50 50,95 5,50%22 fill=%22none%22 stroke=%22yellow%22 stroke-width=%225%22 /><text x=%2225%22 y=%2270%22 font-size=%2250%22 fill=%22yellow%22>Z</text></svg>') no-repeat center/contain; opacity:0.3; transition:opacity 0.2s ease;"></div>
   <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -31,6 +31,8 @@
     let paddleHue = 0;
     let boostActive = false;
     let boostTimer = 0;
+    let shieldActive = false;
+    let shieldStartTime = 0;
     let rightPressed = false;
     let leftPressed = false;
     let score = 0;
@@ -54,6 +56,10 @@
     const blockOffsetTop = 60;
     const blockOffsetLeft = 35;
     let blocks = [];
+
+    const items = [];
+    const SHIELD_DURATION = 10000; // 10秒
+    let rainbowEffectFrames = 0;
 
     function initBlocks() {
       for (let c = 0; c < blockColumnCount; c++) {
@@ -118,7 +124,39 @@
       ctx.fillText("SCORE: " + score.toString().padStart(3, "0"), 10, 30);
     }
 
-    function createItem() {}
+    function createItem(x, y) {
+      items.push({ x, y, vy: 2 });
+    }
+
+    function drawItems() {
+      for (let i = items.length - 1; i >= 0; i--) {
+        const item = items[i];
+        item.y += item.vy;
+        ctx.beginPath();
+        ctx.arc(item.x, item.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "deepskyblue";
+        ctx.fill();
+        ctx.closePath();
+
+        if (item.y > canvas.height - paddleHeight - 20 && item.x > paddleX && item.x < paddleX + paddleWidth) {
+          items.splice(i, 1);
+          shieldActive = true;
+          shieldStartTime = Date.now();
+        } else if (item.y > canvas.height) {
+          items.splice(i, 1);
+        }
+      }
+    }
+
+    function drawShield() {
+      if (shieldActive) {
+        ctx.beginPath();
+        ctx.fillStyle = "rgba(0,255,255,0.4)";
+        ctx.fillRect(0, canvas.height - 5, canvas.width, 5);
+        ctx.closePath();
+      }
+    }
+
     function endGame(win) {
       alert(win ? "You Win!" : "Game Over!");
       document.location.reload();
@@ -135,6 +173,7 @@
               score++;
               blocksBroken++;
               if (blocksBroken % 5 === 0) {
+                rainbowEffectFrames = 30;
                 balls.push({
                   x: paddleX + paddleWidth / 2,
                   y: canvas.height - paddleHeight - 20,
@@ -144,7 +183,7 @@
                   color: "white"
                 });
               }
-              if (Math.random() < 0.1) createItem(b.x + blockWidth / 2, b.y);
+              if (Math.random() < 0.3) createItem(b.x + blockWidth / 2, b.y);
               if (score === blockRowCount * blockColumnCount) endGame(true);
             }
           }
@@ -153,29 +192,47 @@
     }
 
     function drawPaddle() {
-      if (boostActive) {
-        for (let i = 0; i < 10; i++) {
-          const fx = paddleX + Math.random() * paddleWidth;
-          const fy = canvas.height - paddleHeight - 5 + Math.random() * 5;
-          const flameSize = Math.random() * 4 + 2;
-          ctx.beginPath();
-          ctx.arc(fx, fy + 15, flameSize, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(255, ${Math.floor(Math.random() * 100)}, 0, 0.6)`;
-          ctx.fill();
-          ctx.closePath();
-        }
-      }
       ctx.beginPath();
       ctx.fillStyle = boostActive ? `hsl(${(paddleHue += 10) % 360}, 100%, 60%)` : "white";
       ctx.fillRect(paddleX, canvas.height - paddleHeight - 10, paddleWidth, paddleHeight);
       ctx.closePath();
+
+      if (boostActive) {
+        for (let i = 0; i < paddleWidth; i += 10) {
+          const flameHeight = Math.random() * 15 + 10;
+          const flameX = paddleX + i;
+          const flameY = canvas.height - paddleHeight - 10;
+          const gradient = ctx.createLinearGradient(flameX, flameY, flameX, flameY - flameHeight);
+          gradient.addColorStop(0, "orange");
+          gradient.addColorStop(0.5, "red");
+          gradient.addColorStop(1, "rgba(255,255,0,0)");
+          ctx.beginPath();
+          ctx.fillStyle = gradient;
+          ctx.moveTo(flameX, flameY);
+          ctx.lineTo(flameX + 5, flameY);
+          ctx.lineTo(flameX + 2.5, flameY - flameHeight);
+          ctx.fill();
+          ctx.closePath();
+        }
+      }
     }
 
     function draw() {
+      if (rainbowEffectFrames > 0) {
+        drawRainbowFlash();
+        rainbowEffectFrames--;
+      }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBlocks();
       drawPaddle();
       drawScore();
+      drawItems();
+
+      if (shieldActive && Date.now() - shieldStartTime > SHIELD_DURATION) {
+        shieldActive = false;
+      }
+
+      drawShield();
 
       for (let ball of balls) {
         drawBall(ball);
@@ -184,8 +241,9 @@
         if (ball.x + ball.dx > canvas.width - ballRadius || ball.x + ball.dx < ballRadius) ball.dx = -ball.dx;
         if (ball.y + ball.dy < ballRadius) ball.dy = -ball.dy;
         else if (ball.y + ball.dy > canvas.height - ballRadius) {
-          if (ball.x > paddleX && ball.x < paddleX + paddleWidth) ball.dy = -ball.dy;
-          else {
+          if (ball.x > paddleX && ball.x < paddleX + paddleWidth || shieldActive) {
+            ball.dy = -ball.dy;
+          } else {
             balls = balls.filter(b => b !== ball);
             if (balls.length === 0) endGame(false);
           }
@@ -199,11 +257,9 @@
 
       if (boostActive) {
         boostTimer--;
-        if (boostTimer <= 0) {
-          boostActive = false;
-          document.getElementById("boostIcon").style.opacity = 0.3;
-        }
+        if (boostTimer <= 0) boostActive = false;
       }
+
       requestAnimationFrame(draw);
     }
 
@@ -213,7 +269,6 @@
       if (e.key === "z" || e.key === "Z") {
         boostActive = true;
         boostTimer = 60;
-        document.getElementById("boostIcon").style.opacity = 1;
       }
     });
     document.addEventListener("keyup", e => {
@@ -222,6 +277,22 @@
     });
 
     draw();
+
+    function drawRainbowFlash() {
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, 'red');
+      gradient.addColorStop(0.17, 'orange');
+      gradient.addColorStop(0.34, 'yellow');
+      gradient.addColorStop(0.51, 'green');
+      gradient.addColorStop(0.68, 'blue');
+      gradient.addColorStop(0.85, 'indigo');
+      gradient.addColorStop(1, 'violet');
+
+      ctx.fillStyle = gradient;
+      ctx.globalAlpha = 0.3;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1.0;
+    }
   </script>
 </body>
 </html>
